@@ -1,0 +1,58 @@
+name: Atualizar Dashboard BACEN
+
+on:
+  schedule:
+    # Toda segunda-feira às 7h UTC (4h Brasilia) — BACEN publica trimestral
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    # Permite rodar manualmente pelo GitHub Actions UI
+    inputs:
+      anos:
+        description: 'Quantos anos de historico baixar'
+        required: false
+        default: '4'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # necessario para fazer commit
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Rodar scraper BACEN
+        run: |
+          ANOS=${{ github.event.inputs.anos || '4' }}
+          python scripts/bacen_setor.py --github --anos $ANOS
+
+      - name: Verificar se dados foram gerados
+        id: check
+        run: |
+          if [ -f "docs/data.json" ]; then
+            echo "dados_gerados=true" >> $GITHUB_OUTPUT
+            SIZE=$(du -sh docs/data.json | cut -f1)
+            echo "Tamanho data.json: $SIZE"
+          else
+            echo "dados_gerados=false" >> $GITHUB_OUTPUT
+            echo "AVISO: data.json nao foi gerado"
+          fi
+
+      - name: Commit e push dos dados atualizados
+        if: steps.check.outputs.dados_gerados == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "data: atualizar ranking BACEN ${{ env.PERIODO }}"
+          file_pattern: "docs/data.json docs/meta.json"
+          commit_user_name: "BACEN Bot"
+          commit_user_email: "actions@github.com"

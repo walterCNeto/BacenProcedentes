@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BACEN — Reclamações por Assunto — Bancos S1/S2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F0F2F6;color:#1a1a2e;font-size:13px}
+header{background:#1E3A5F;color:#fff;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+header h1{font-size:17px;font-weight:600}
+header .sub{font-size:11px;opacity:.65;margin-top:2px}
+.live-badge{background:#10B981;color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.page{max-width:1500px;margin:0 auto;padding:18px 16px}
+.loading{text-align:center;padding:60px;color:#6B7280}
+.loading-spinner{width:40px;height:40px;border:3px solid #E5E7EB;border-top-color:#2563A8;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.meta-bar{background:#fff;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;font-size:12px;color:#6B7280}
+.meta-bar strong{color:#374151}
+.krow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.kri{background:#fff;border-radius:10px;padding:14px 16px;border-left:4px solid var(--c)}
+.kri-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6B7280;margin-bottom:4px}
+.kri-val{font-size:22px;font-weight:700;color:#111}
+.kri-desc{font-size:11px;color:#9CA3AF;margin-top:3px}
+.card{background:#fff;border-radius:10px;padding:16px 18px;margin-bottom:14px}
+.card h2{font-size:13px;font-weight:600;margin-bottom:3px}
+.card .ch{font-size:11px;color:#9CA3AF;margin-bottom:12px;line-height:1.5}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.row3{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+.cw{position:relative;width:100%}
+.h300{height:300px}.h360{height:360px}.h420{height:420px}.h500{height:500px}
+.filters{background:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.fgrp{display:flex;flex-direction:column;gap:4px}
+.fgrp label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#6B7280;font-weight:600}
+select,input[type=text]{padding:6px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;background:#fff;min-width:160px}
+button{padding:6px 16px;border-radius:6px;border:none;background:#1E3A5F;color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+button:hover{background:#2D5F9E}
+/* Autocomplete */
+.ac-wrap{position:relative;min-width:200px}
+.ac-input{width:100%;padding:6px 24px 6px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;background:#fff;outline:none}
+.ac-input:focus{border-color:#2563A8;box-shadow:0 0 0 2px rgba(37,99,200,.12)}
+.ac-wrap::after{content:'▾';position:absolute;right:9px;top:50%;transform:translateY(-50%);color:#9CA3AF;font-size:11px;pointer-events:none}
+.ac-list{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid #D1D5DB;border-radius:6px;max-height:220px;overflow-y:auto;z-index:999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.ac-list.open{display:block}
+.ac-item{padding:7px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid #F3F4F6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.sel{background:#EFF6FF;color:#1E40AF}
+.ac-seg{font-size:10px;font-weight:700;padding:0 5px;border-radius:6px;margin-right:5px}
+.seg-s1{background:#DBEAFE;color:#1E40AF}.seg-s2{background:#D1FAE5;color:#065F46}.seg-o{background:#F3F4F6;color:#6B7280}
+/* Tabela */
+.pt{width:100%;border-collapse:collapse;font-size:12px}
+.pt th{padding:8px 10px;text-align:left;font-weight:600;color:#374151;font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #E5E7EB;background:#F9FAFB;white-space:nowrap;cursor:pointer}
+.pt th:hover{background:#F3F4F6}
+.pt td{padding:7px 10px;border-bottom:1px solid #F3F4F6;vertical-align:middle}
+.pt tr:hover td{background:#FAFAFA}
+.barw{background:#F3F4F6;border-radius:3px;height:7px;overflow:hidden;min-width:70px;display:inline-block}
+.barf{height:7px;border-radius:3px}
+.badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600}
+.b-gr{background:#F3F4F6;color:#374151}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:#6B7280;margin-top:8px}
+.legc{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+.pag{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:12px}
+.pag button{padding:4px 10px;font-size:11px;font-weight:400}
+.pag .info{color:#6B7280}
+footer{text-align:center;padding:16px;font-size:10px;color:#9CA3AF}
+@media(max-width:900px){.row2,.row3,.krow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Reclamações Procedentes BACEN — Todos os Bancos por Assunto</h1>
+    <div class="sub">Irregularidades por Instituição Financeira — Banco Central do Brasil &nbsp;|&nbsp; <span id="ger">carregando...</span></div>
+  </div>
+  <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+</header>
+
+<div class="page">
+  <!-- Loading state -->
+  <div id="loading" class="loading">
+    <div class="loading-spinner"></div>
+    <div>Carregando dados do BACEN...</div>
+  </div>
+
+  <!-- Conteudo (oculto ate dados carregarem) -->
+  <div id="app" style="display:none">
+    <div class="meta-bar" id="meta-bar"></div>
+    <div class="krow" id="krow"></div>
+
+    <div class="filters">
+      <div class="fgrp">
+        <label>Segmento</label>
+        <select id="f-seg" onchange="filtrar()">
+          <option value="">Todos</option>
+          <option value="S1">S1</option>
+          <option value="S2">S2</option>
+        </select>
+      </div>
+      <div class="fgrp">
+        <label>Conglomerado</label>
+        <div class="ac-wrap" id="ac-cong-wrap">
+          <input type="text" id="ac-cong" class="ac-input" placeholder="Digite o conglomerado..." autocomplete="off" oninput="acFiltrar('cong')" onfocus="acAbrir('cong')" onblur="acFechar('cong',200)">
+          <div class="ac-list" id="ac-cong-list"></div>
+        </div>
+      </div>
+      <div class="fgrp">
+        <label>Banco (instituição)</label>
+        <div class="ac-wrap" id="ac-banco-wrap">
+          <input type="text" id="ac-banco" class="ac-input" placeholder="Digite o banco..." autocomplete="off" oninput="acFiltrar('banco')" onfocus="acAbrir('banco')" onblur="acFechar('banco',200)">
+          <div class="ac-list" id="ac-banco-list"></div>
+        </div>
+      </div>
+      <div class="fgrp">
+        <label>Periodo</label>
+        <select id="f-periodo" onchange="filtrar()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="fgrp">
+        <label>Assunto (busca)</label>
+        <input type="text" id="f-assunto" placeholder="Ex: cartão, consignado..." oninput="filtrar()" style="min-width:180px">
+      </div>
+      <div class="fgrp" style="align-self:flex-end">
+        <button onclick="resetFiltros()">Limpar filtros</button>
+      </div>
+    </div>
+
+    <div class="row3">
+      <div class="card">
+        <h2>Top Bancos — Total Procedentes Histórico</h2>
+        <div class="ch">Soma acumulada de reclamacoes reguladas procedentes por banco</div>
+        <div class="cw h360"><canvas id="c-rank-banco"></canvas></div>
+        <div class="leg" id="leg-banco"></div>
+      </div>
+      <div class="card">
+        <h2>Distribuicao por Segmento</h2>
+        <div class="ch">Proporcao S1, S2 e demais no total de procedentes</div>
+        <div class="cw h300"><canvas id="c-seg"></canvas></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="card">
+        <h2>Top Assuntos do Setor — Acumulado</h2>
+        <div class="ch">Irregularidades com mais procedentes no setor bancario. Base para priorizar controles internos.</div>
+        <div class="cw h420"><canvas id="c-rank-assunto"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Evolucao por Banco / Conglomerado</h2>
+        <div class="ch">Serie historica dos top 8 por volume. Selecione um banco/conglomerado para focar.</div>
+        <div class="cw h360"><canvas id="c-evolucao"></canvas></div>
+        <div class="leg" id="leg-evolucao"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Tabela Detalhada — Banco × Assunto × Periodo</h2>
+      <div class="ch">Clique nos cabecalhos para ordenar. Use os filtros acima para refinar.</div>
+      <div style="overflow-x:auto;margin-top:8px">
+        <table class="pt">
+          <thead><tr>
+            <th onclick="sortBy('Segmento')">Seg ↕</th>
+            <th onclick="sortBy('Conglomerado')">Conglomerado ↕</th>
+            <th onclick="sortBy('Banco')">Banco ↕</th>
+            <th onclick="sortBy('Assunto')">Assunto ↕</th>
+            <th onclick="sortBy('Referencia')">Periodo ↕</th>
+            <th onclick="sortBy('qtd')" style="text-align:right">Procedentes ↕</th>
+            <th style="width:110px">Proporcao</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="pag">
+          <button onclick="prevPage()">◀</button>
+          <span class="info" id="pag-info"></span>
+          <button onclick="nextPage()">▶</button>
+          <span class="info" id="total-rows"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Fonte: Banco Central do Brasil — Irregularidades por Instituicao Financeira (Dados Abertos ODbL)<br>
+  Reclamacoes reguladas procedentes = casos em que o BACEN verificou indicio de descumprimento de norma.<br>
+  Atualizacao automatica semanal via GitHub Actions. Segmentacao S1/S2 conforme Resolucao BCB 4.553/2017.
+</footer>
+
+<script>
+const CORES=['#DC2626','#2563A8','#D97706','#059669','#7C3AED','#EA580C','#0891B2','#10B981',
+             '#8B5CF6','#F59E0B','#EF4444','#3B82F6','#A855F7','#14B8A6','#F97316','#6366F1'];
+const SEG_COLOR={S1:'#1E40AF',S2:'#065F46',Outros:'#374151'};
+const N=(v,d=0)=>(v==null||isNaN(v))?'—':new Intl.NumberFormat('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
+
+let D=null, charts={}, dadosFiltrados=[], sortCol='qtd', sortAsc=false, pagAtual=0;
+const POR_PAG=50;
+let selCong='', selBanco='';
+const kill=id=>{if(charts[id]){charts[id].destroy();delete charts[id];}};
+
+// ── Carregar dados via fetch ──────────────────────────────────────────────────
+async function carregarDados(){
+  try {
+    // Carrega dados e meta em paralelo
+    const [resData, resMeta] = await Promise.all([
+      fetch('data.json?t='+Date.now()),
+      fetch('meta.json?t='+Date.now()).catch(()=>null)
+    ]);
+    if(!resData.ok) throw new Error(`HTTP ${resData.status}`);
+    D = await resData.json();
+
+    // Meta bar
+    if(resMeta?.ok){
+      const meta = await resMeta.json();
+      document.getElementById('meta-bar').innerHTML=
+        `<span>Ultima atualizacao: <strong>${new Date(meta.ultima_atualizacao).toLocaleString('pt-BR')}</strong></span>
+         <span>Ultimo periodo: <strong>${meta.ultimo_periodo}</strong></span>
+         <span>Bancos: <strong>${N(meta.n_bancos)}</strong></span>
+         <span>Registros: <strong>${N(meta.n_registros)}</strong></span>`;
+    }
+
+    document.getElementById('ger').textContent='Gerado em: '+new Date(D.gerado_em).toLocaleString('pt-BR');
+    document.getElementById('loading').style.display='none';
+    document.getElementById('app').style.display='block';
+    inicializar();
+  } catch(e){
+    document.getElementById('loading').innerHTML=
+      `<div style="color:#DC2626;font-size:14px">Erro ao carregar dados: ${e.message}</div>
+       <div style="color:#6B7280;margin-top:8px;font-size:12px">Verifique se data.json existe em docs/</div>`;
+  }
+}
+
+function inicializar(){
+  // KRIs
+  const totalProc=D.top_bancos.reduce((a,b)=>a+b.total,0);
+  const nS1=D.bancos.filter(b=>b.Segmento==='S1').length;
+  const nS2=D.bancos.filter(b=>b.Segmento==='S2').length;
+  [
+    {lbl:'Total procedentes setor',val:N(totalProc),desc:'Soma todos os periodos',c:'#DC2626'},
+    {lbl:'Bancos analisados',val:N(D.bancos.length),desc:`S1: ${nS1} | S2: ${nS2}`,c:'#2563A8'},
+    {lbl:'Periodos coletados',val:N(D.periodos.length),desc:(D.periodos[0]||'')+'…'+(D.periodos.slice(-1)[0]||''),c:'#7C3AED'},
+    {lbl:'Tipos de irregularidade',val:N(D.assuntos.length),desc:'Assuntos distintos',c:'#059669'},
+    {lbl:'Mais reclamado',val:'#1',desc:D.top_bancos[0]?.banco||'—',c:'#D97706'},
+  ].forEach(k=>{
+    const d=document.createElement('div');
+    d.className='kri'; d.style.cssText=`--c:${k.c}`;
+    d.innerHTML=`<div class="kri-lbl">${k.lbl}</div><div class="kri-val">${k.val}</div><div class="kri-desc">${k.desc}</div>`;
+    document.getElementById('krow').appendChild(d);
+  });
+
+  // Periodos
+  const fPer=document.getElementById('f-periodo');
+  D.periodos.slice().reverse().forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;fPer.appendChild(o);});
+
+  // Autocomplete setup
+  document.addEventListener('click',e=>{
+    ['cong','banco'].forEach(t=>{
+      const w=document.getElementById(`ac-${t}-wrap`);
+      if(w&&!w.contains(e.target)) document.getElementById(`ac-${t}-list`).classList.remove('open');
+    });
+  });
+  ['cong','banco'].forEach(tipo=>{
+    document.getElementById(`ac-${tipo}`).addEventListener('keydown',e=>{
+      const list=document.getElementById(`ac-${tipo}-list`);
+      const items=list.querySelectorAll('.ac-item');
+      const active=list.querySelector('.ac-item.sel');
+      if(e.key==='ArrowDown'){e.preventDefault();if(!active)items[0]?.classList.add('sel');else{active.classList.remove('sel');(active.nextElementSibling||items[0])?.classList.add('sel');}}
+      else if(e.key==='ArrowUp'){e.preventDefault();if(!active)items[items.length-1]?.classList.add('sel');else{active.classList.remove('sel');(active.previousElementSibling||items[items.length-1])?.classList.add('sel');}}
+      else if(e.key==='Enter'&&active){e.preventDefault();active.click();}
+      else if(e.key==='Escape')list.classList.remove('open');
+    });
+  });
+
+  filtrar();
+}
+
+// ── Autocomplete ──────────────────────────────────────────────────────────────
+function opsBancoFiltrados(){
+  return selCong ? D.bancos.filter(b=>b.Conglomerado===selCong) : D.bancos;
+}
+function acFiltrar(tipo){
+  const q=document.getElementById(`ac-${tipo}`).value.toLowerCase();
+  if(tipo==='cong'){
+    const lista=D.conglomerados.filter(c=>c.toLowerCase().includes(q));
+    renderAcList('cong',lista.map(c=>({label:c,value:c,seg:''})));
+    if(!q){selCong='';selBanco='';document.getElementById('ac-banco').value='';filtrar();}
+  } else {
+    const lista=opsBancoFiltrados().filter(b=>b.Banco.toLowerCase().includes(q)||b.Conglomerado.toLowerCase().includes(q));
+    renderAcList('banco',lista.map(b=>({label:b.Banco,sub:b.Conglomerado,value:b.Banco,seg:b.Segmento})));
+    if(!q){selBanco='';filtrar();}
+  }
+}
+function renderAcList(tipo,itens){
+  const el=document.getElementById(`ac-${tipo}-list`);
+  if(!itens.length){el.innerHTML='<div class="ac-item" style="color:#9CA3AF">Nenhum resultado</div>';el.classList.add('open');return;}
+  el.innerHTML=itens.slice(0,50).map(it=>{
+    const segCls=it.seg==='S1'?'seg-s1':it.seg==='S2'?'seg-s2':'seg-o';
+    const badge=it.seg?`<span class="ac-seg ${segCls}">${it.seg}</span>`:'';
+    const sub=it.sub&&it.sub!==it.label?`<span style="color:#9CA3AF;font-size:10px;margin-left:4px">${it.sub}</span>`:'';
+    return `<div class="ac-item" onclick="acSelecionar('${tipo}','${it.value.replace(/'/g,"\\'")}','${it.label.replace(/'/g,"\\'")}')">${badge}${it.label}${sub}</div>`;
+  }).join('');
+  el.classList.add('open');
+}
+function acSelecionar(tipo,value,label){
+  document.getElementById(`ac-${tipo}`).value=label;
+  document.getElementById(`ac-${tipo}-list`).classList.remove('open');
+  if(tipo==='cong'){selCong=value;selBanco='';document.getElementById('ac-banco').value='';}
+  else selBanco=value;
+  filtrar();
+}
+function acAbrir(tipo){acFiltrar(tipo);}
+function acFechar(tipo,delay){setTimeout(()=>document.getElementById(`ac-${tipo}-list`).classList.remove('open'),delay);}
+
+// ── Filtrar ───────────────────────────────────────────────────────────────────
+function filtrar(){
+  if(!D) return;
+  const seg=document.getElementById('f-seg').value;
+  const per=document.getElementById('f-periodo').value;
+  const assQ=document.getElementById('f-assunto').value.toLowerCase();
+  dadosFiltrados=D.dados.filter(d=>
+    (!seg||d.Segmento===seg)&&(!selCong||d.Conglomerado===selCong)&&
+    (!selBanco||d.Banco===selBanco)&&(!per||d.Referencia===per)&&
+    (!assQ||d.Assunto.toLowerCase().includes(assQ))
+  );
+  pagAtual=0;
+  renderRankBanco(dadosFiltrados);renderSeg(dadosFiltrados);
+  renderRankAssunto(dadosFiltrados);renderEvolucao(dadosFiltrados);renderTabela();
+}
+function resetFiltros(){
+  document.getElementById('f-seg').value='';
+  document.getElementById('f-periodo').value='';
+  document.getElementById('f-assunto').value='';
+  document.getElementById('ac-cong').value='';
+  document.getElementById('ac-banco').value='';
+  selCong='';selBanco='';filtrar();
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+function renderRankBanco(d){
+  kill('rb'); const agg={};d.forEach(r=>{agg[r.Banco]=(agg[r.Banco]||0)+r.qtd;});
+  const sorted=Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const cores=sorted.map(([banco])=>{const b=D.bancos.find(x=>x.Banco===banco);return b?.Segmento==='S1'?'#3B82F6':b?.Segmento==='S2'?'#10B981':'#D1D5DB';});
+  charts['rb']=new Chart(document.getElementById('c-rank-banco').getContext('2d'),{
+    type:'bar',data:{labels:sorted.map(([n])=>n.length>35?n.substring(0,35)+'...':n),datasets:[{data:sorted.map(([,v])=>v),backgroundColor:cores,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${N(c.parsed.x)}`}}},scales:{x:{ticks:{callback:v=>N(v)},grid:{color:'#F3F4F6'}},y:{ticks:{font:{size:10}}}}}
+  });
+  document.getElementById('leg-banco').innerHTML='<span><span class="legc" style="background:#3B82F6"></span>S1</span><span><span class="legc" style="background:#10B981"></span>S2</span><span><span class="legc" style="background:#D1D5DB"></span>Outros</span>';
+}
+function renderSeg(d){
+  kill('seg'); const agg={S1:0,S2:0,Outros:0};d.forEach(r=>{agg[r.Segmento]=(agg[r.Segmento]||0)+r.qtd;});
+  const entries=Object.entries(agg).filter(([,v])=>v>0);
+  charts['seg']=new Chart(document.getElementById('c-seg').getContext('2d'),{
+    type:'doughnut',data:{labels:entries.map(([k])=>k),datasets:[{data:entries.map(([,v])=>v),backgroundColor:entries.map(([k])=>SEG_COLOR[k]||'#D1D5DB'),borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}},tooltip:{callbacks:{label:c=>`${c.label}: ${N(c.parsed)}`}}}}
+  });
+}
+function renderRankAssunto(d){
+  kill('ra'); const agg={};d.forEach(r=>{agg[r.Assunto]=(agg[r.Assunto]||0)+r.qtd;});
+  const sorted=Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  charts['ra']=new Chart(document.getElementById('c-rank-assunto').getContext('2d'),{
+    type:'bar',data:{labels:sorted.map(([n])=>n.length>65?n.substring(0,65)+'...':n),datasets:[{data:sorted.map(([,v])=>v),backgroundColor:sorted.map((_,i)=>CORES[i%CORES.length]+'CC'),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${N(c.parsed.x)}`}}},scales:{x:{ticks:{callback:v=>N(v)},grid:{color:'#F3F4F6'}},y:{ticks:{font:{size:10}}}}}
+  });
+}
+function renderEvolucao(d){
+  kill('ev'); const refs=D.periodos.slice().sort(); let grupos;
+  if(selBanco) grupos=[{label:selBanco,fn:r=>r.Banco===selBanco}];
+  else if(selCong) grupos=[{label:selCong+' (cong.)',fn:r=>r.Conglomerado===selCong}];
+  else{const agg={};d.forEach(r=>{agg[r.Banco]=(agg[r.Banco]||0)+r.qtd;});grupos=Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([b])=>({label:b,fn:r=>r.Banco===b}));}
+  const datasets=grupos.map(({label,fn},i)=>({
+    label:label.length>28?label.substring(0,28)+'...':label,
+    data:refs.map(ref=>d.filter(r=>fn(r)&&r.Referencia===ref).reduce((a,r)=>a+r.qtd,0)||null),
+    borderColor:CORES[i%CORES.length],backgroundColor:CORES[i%CORES.length]+'15',
+    borderWidth:2,pointRadius:3,tension:.3,fill:false,spanGaps:true
+  }));
+  charts['ev']=new Chart(document.getElementById('c-evolucao').getContext('2d'),{
+    type:'line',data:{labels:refs,datasets},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{maxRotation:45,font:{size:10}},grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>N(v)},grid:{color:'#F3F4F6'}}}}
+  });
+  document.getElementById('leg-evolucao').innerHTML=grupos.map(({label},i)=>`<span><span class="legc" style="background:${CORES[i%CORES.length]}"></span>${label.length>45?label.substring(0,45)+'...':label}</span>`).join('');
+}
+function renderTabela(){
+  const maxP=Math.max(...dadosFiltrados.map(d=>d.qtd||0),1);
+  const sorted=[...dadosFiltrados].sort((a,b)=>{
+    const va=a[sortCol]||'',vb=b[sortCol]||'';
+    return typeof va==='number'?(sortAsc?va-vb:vb-va):(sortAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va)));
+  });
+  const total=sorted.length,paginas=Math.ceil(total/POR_PAG);
+  pagAtual=Math.min(pagAtual,Math.max(0,paginas-1));
+  const slice=sorted.slice(pagAtual*POR_PAG,(pagAtual+1)*POR_PAG);
+  const segCls=s=>s==='S1'?'seg-s1':s==='S2'?'seg-s2':'seg-o';
+  document.getElementById('tbody').innerHTML=slice.map(d=>{
+    const pct=Math.round((d.qtd/maxP)*100);
+    return `<tr><td><span class="ac-seg ${segCls(d.Segmento)}">${d.Segmento}</span></td>
+      <td style="font-size:11px;font-weight:500">${d.Conglomerado||'—'}</td>
+      <td style="font-size:11px;color:#6B7280">${d.Banco}</td>
+      <td style="font-size:11px;max-width:340px;line-height:1.4">${d.Assunto}</td>
+      <td><span class="badge b-gr">${d.Referencia}</span></td>
+      <td style="text-align:right;font-weight:700">${N(d.qtd)}</td>
+      <td><div class="barw"><div class="barf" style="width:${pct}%;background:#2563A8"></div></div></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7" style="text-align:center;padding:24px;color:#9CA3AF">Nenhum dado</td></tr>';
+  document.getElementById('pag-info').textContent=`Pag ${pagAtual+1}/${paginas||1}`;
+  document.getElementById('total-rows').textContent=`${N(total)} registros`;
+}
+function sortBy(col){if(sortCol===col)sortAsc=!sortAsc;else{sortCol=col;sortAsc=col!=='qtd';}renderTabela();}
+function prevPage(){if(pagAtual>0){pagAtual--;renderTabela();}}
+function nextPage(){if(pagAtual<Math.ceil(dadosFiltrados.length/POR_PAG)-1){pagAtual++;renderTabela();}}
+
+// Iniciar
+carregarDados();
+</script>
+</body>
+</html>
