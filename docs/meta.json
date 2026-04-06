@@ -1,1 +1,23 @@
-{"ultima_atualizacao":"Nunca","ultimo_periodo":"","periodos_coletados":[],"n_bancos":0,"n_registros":0}
+{
+  "ultima_atualizacao": "2026-04-06T08:25:43.159176",
+  "ultimo_periodo": "2025-T4",
+  "periodos_coletados": [
+    "2022-T1",
+    "2022-T3",
+    "2022-T4",
+    "2023-T1",
+    "2023-T2",
+    "2023-T3",
+    "2023-T4",
+    "2024-T1",
+    "2024-T2",
+    "2024-T3",
+    "2024-T4",
+    "2025-T1",
+    "2025-T2",
+    "2025-T3",
+    "2025-T4"
+  ],
+  "n_bancos": 474,
+  "n_registros": 56763
+}
