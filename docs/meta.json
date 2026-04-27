@@ -1,6 +1,6 @@
 {
-  "ultima_atualizacao": "2026-04-06T08:25:43.159176",
-  "ultimo_periodo": "2025-T4",
+  "ultima_atualizacao": "2026-04-27T09:25:39.644925",
+  "ultimo_periodo": "2026-T1",
   "periodos_coletados": [
     "2022-T1",
     "2022-T3",
@@ -16,8 +16,9 @@
     "2025-T1",
     "2025-T2",
     "2025-T3",
-    "2025-T4"
+    "2025-T4",
+    "2026-T1"
   ],
-  "n_bancos": 474,
-  "n_registros": 56763
+  "n_bancos": 486,
+  "n_registros": 61364
 }
